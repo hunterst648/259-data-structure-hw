@@ -33,8 +33,11 @@ rs_old <- url_old %>% read_html() %>% html_nodes(xpath='/html/body/table[2]') %>
 
 #ANSWER
 
-
-
+rs_joined_orig <-  full_join(rs_old,rs_new, by = c("Artist", "Song"))
+nrow(rs_joined_orig)
+#> The first thing I notice is that there are a lot of NA's in the columns that 
+#> that were holding data uniquely for the old and new set. 
+#> 
 ### Question 2 ---------- 
 
 # To clean up the datasets, it would be more efficient to put them into a single data set
@@ -44,8 +47,20 @@ rs_old <- url_old %>% read_html() %>% html_nodes(xpath='/html/body/table[2]') %>
 # Make Rank and Year into integer variables for rs_old before binding them into rs_all
 
 #ANSWER
+rs_old <- add_column(rs_old,Source = "Old")
+rs_new <- add_column(rs_new,Source = "New")
+#rs_old <- rs_old %>% as.integer(rs_old$Year) %>% as.integer(rs_old$Rank)
+# The above code doesn't work because you can not coerce lists. 
+#rs_old <- rs_old %>% as.integer(unlist(rs_old$Year)) %>%
+#  as.integer(unlist(rs_old$Rank))
+#> The above code also didn't work, I think I need to do it by unlisting to a 
+#> separate variable first. Then put it back into the rs_old variable. 
 
-
+x <- as.integer(unlist(rs_old$Year))
+y <- as.integer(unlist(rs_old$Rank))
+rs_old <- rs_old %>% mutate(Year=x, Rank=y)
+glimpse(rs_old)
+rs_all <- bind_rows(rs_old,rs_new)
 ### Question 3 ----------
 
 # The join in Q1 resulted in duplicates because of differences in how the songs and artists names were written
@@ -56,7 +71,7 @@ rs_old <- url_old %>% read_html() %>% html_nodes(xpath='/html/body/table[2]') %>
 # Use both functions to make all artists/song lowercase and remove any extra spaces
 
 #ANSWER
-
+rs_all <-  str_remove_all(Artist,"The")
 
 ### Question 4 ----------
 
