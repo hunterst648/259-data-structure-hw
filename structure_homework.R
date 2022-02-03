@@ -94,8 +94,9 @@ rs_all$Song <-  track
 # in the new rs_joined compared to the original. Use nrow to check (there should be 799 rows)
 
 #ANSWER
-new <- split(rs_all$Source,~'Old')
-
+new <- filter(rs_all, Source=="New")
+old <- filter(rs_all, Source == "Old")
+rs_joined <- full_join(new,old, by = c("Artist","Song"),suffix= c("_Old","_New"))
 ### Question 5 ----------
 
 # Let's clean up rs_joined with the following steps:
