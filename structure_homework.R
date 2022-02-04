@@ -108,6 +108,10 @@ rs_joined <- full_join(new,old, by = c("Artist","Song"),suffix= c("_Old","_New")
 # You should now be able to see how each song moved up/down in rankings between the two lists
 
 #ANSWER
+no_source <- select(rs_joined,-c(Source_Old,Source_New))
+no_repeats <- na.omit(no_source,c(Rank_Old,Rank_New))
+rs_joined <- no_repeats %>%  mutate(Rank_Change = Rank_New - Rank_Old) %>% 
+     arrange(Rank_Change)
 
 
 ### Question 6 ----------
