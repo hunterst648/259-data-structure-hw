@@ -124,7 +124,13 @@ rs_joined <- no_repeats %>%  mutate(Rank_Change = Rank_New - Rank_Old) %>%
 
 #ANSWER
 
-
+rs_joined <- rs_joined %>% mutate(decade = floor(Year_New/10)*10)
+z <- rs_joined$decade
+rs_joined$decade <- factor(z, levels = c(1950,1960,1970,1980,1990,2000),
+         labels = c("1950s","1960s","1970s","1980s","1990s","2000s"))
+summarize(fct_count(rs_joined$decade))                                                            
+                                                                       
+max(decade)
 
 ### Question 7 ----------
 
