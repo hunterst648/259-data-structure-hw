@@ -128,7 +128,7 @@ rs_joined <- rs_joined %>% mutate(decade = floor(Year_New/10)*10)
 z <- rs_joined$decade
 rs_joined$decade <- factor(z, levels = c(1950,1960,1970,1980,1990,2000),
          labels = c("1950s","1960s","1970s","1980s","1990s","2000s"))
-summarize(fct_count(rs_joined$decade))                                                            
+                                                            
                                                                        
 max(decade)
 
@@ -140,8 +140,9 @@ max(decade)
 # proportion of songs in each of the top three decades (vs. all the rest)
 
 #ANSWER
-
-
+fct_count(rs_joined$decade,sort = TRUE) 
+pop <- fct_lump(rs_joined$decade,n=3)
+fct_count(pop, prop = .10)
 
 ### Question 8 ---------- 
 
@@ -150,7 +151,8 @@ max(decade)
 # Use parse_date_time to fix it
 
 #ANSWER
-
+top20 <- read_csv( "top_20.csv")
+top20 <- top20 %>% as_datetime(Relase) %>% parse_date_time(top20$Release,"y m d")
 
 ### Question 9 --------
 
