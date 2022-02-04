@@ -152,8 +152,8 @@ fct_count(pop, prop = .10)
 
 #ANSWER
 top20 <- read_csv( "top_20.csv")
-top20 <- top20 %>% as_datetime(Relase) %>% parse_date_time(top20$Release,"y m d")
-
+top20$Release <- parse_date_time(top20$Release,"d m y")
+glimpse(top20)
 ### Question 9 --------
 
 # top20's Style and Value are mixing two different variables into one column
@@ -161,7 +161,7 @@ top20 <- top20 %>% as_datetime(Relase) %>% parse_date_time(top20$Release,"y m d"
 # overwrite top25 with the pivoted data (there should now be 20 rows!)
 
 #ANSWER
-
+top20 <- pivot_wider(top20, names_from = Style ,values_from  = Value,names_sort = T)
 
 
 ### Question 10 ---------
@@ -176,7 +176,11 @@ top20 <- top20 %>% as_datetime(Relase) %>% parse_date_time(top20$Release,"y m d"
 
 #ANSWER
 
-
+test <- left_join(top20,rs_joined,by = c("Artist","Song")) %>%
+  mutate(Month = value <- month(Release,label = TRUE)) %>% 
+  mutate(Season = factor(Month,levels= c(1:4),
+        labels = c("Winter","Spring","Summer","Fall")))
+fct_count(test$Season)
 
 ### Question 11 ---------
 
