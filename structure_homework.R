@@ -178,7 +178,7 @@ top20 <- pivot_wider(top20, names_from = Style ,values_from  = Value,names_sort 
 
 test <- left_join(top20,rs_joined,by = c("Artist","Song")) %>%
   mutate(Month = value <- month(Release,label = TRUE)) %>% 
-  mutate(Season = factor(Month,levels= c(1:4),
+  mutate(Season = factor(format(Month,"%q"),levels= c(1,2,3,4),
         labels = c("Winter","Spring","Summer","Fall")))
 fct_count(test$Season)
 
@@ -190,6 +190,15 @@ fct_count(test$Season)
 # Figure out which is the top-ranked song (from Rank_New) that used a minor key
 
 #ANSWER
+# top20 <- mutate(top20, Quality= ifelse(Key %in% "m", "Minor","Major"))
 
+#> The above did not work as expected, Maybe I need to use a function that 
+#> will search strings better then %in% does?
 
+test <- mutate(test, Quality= ifelse(str_detect(Key, "m"), "Minor","Major"))
+# the above code works much better.
 
+top_minor <- test 
+top_minor <-   filter(top_minor, str_detect(Quality, "Minor")) %>% arrange(Rank_New)
+view(top_minor)
+# Good Vibrations By the Beach Boys Rank is 6 
