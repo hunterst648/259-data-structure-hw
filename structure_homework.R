@@ -36,7 +36,8 @@ rs_old <- url_old %>% read_html() %>% html_nodes(xpath='/html/body/table[2]') %>
 rs_joined_orig <-  full_join(rs_old,rs_new, by = c("Artist", "Song"))
 nrow(rs_joined_orig)
 #> The first thing I notice is that there are a lot of NA's in the columns that 
-#> that were holding data uniquely for the old and new set. 
+#> that were holding data uniquely for the old and new set. They failed to match
+#> because the strings are not exactly the same.
 #> 
 ### Question 2 ---------- 
 
