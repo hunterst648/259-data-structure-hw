@@ -21,9 +21,6 @@ url_old <- "https://www.cs.ubc.ca/~davet/music/list/Best9.html"
 rs_old <- url_old %>% read_html() %>% html_nodes(xpath='/html/body/table[2]') %>% html_table() %>% pluck(1) %>% 
   select(1, 4, 3, 7) %>% rename(Rank = X1, Artist = X3, Song = X4, Year = X7) %>% filter(Year != "YEAR") 
 
-# If there's a security error, add:
-#url %>% httr::GET(config = httr::config(ssl_verifypeer = FALSE)) %>% read_html()
-
 #OR
 load("rs_data.RData")
 
@@ -38,13 +35,9 @@ load("rs_data.RData")
 # Why did some of the artist-song fail to match up?
 
 #ANSWER
-
-rs_joined_orig <-  full_join(rs_old,rs_new, by = c("Artist", "Song"))
+rs_joined_orig <- full_join(rs_old, rs_new, by = c("Artist", "Song"))
 nrow(rs_joined_orig)
-#> The first thing I notice is that there are a lot of NA's in the columns that 
-#> that were holding data uniquely for the old and new set. They failed to match
-#> because the strings are not exactly the same.
-#> 
+
 ### Question 2 ---------- 
 
 # To clean up the datasets, it would be more efficient to put them into a single data set
@@ -54,20 +47,10 @@ nrow(rs_joined_orig)
 # Make Rank and Year into integer variables for rs_old before binding them into rs_all
 
 #ANSWER
-rs_old <- add_column(rs_old,Source = "Old")
-rs_new <- add_column(rs_new,Source = "New")
-#rs_old <- rs_old %>% as.integer(rs_old$Year) %>% as.integer(rs_old$Rank)
-# The above code doesn't work because you can not coerce lists. 
-#rs_old <- rs_old %>% as.integer(unlist(rs_old$Year)) %>%
-#  as.integer(unlist(rs_old$Rank))
-#> The above code also didn't work, I think I need to do it by unlisting to a 
-#> separate variable first. Then put it back into the rs_old variable. 
+rs_old <- rs_old %>% mutate(Rank = as.integer(Rank), Year = as.integer(Year), Source = "Old")
+rs_new <- rs_new %>% mutate(Source = "New")
+rs_all <- bind_rows(rs_new, rs_old)
 
-x <- as.integer(unlist(rs_old$Year))
-y <- as.integer(unlist(rs_old$Rank))
-rs_old <- rs_old %>% mutate(Year=x, Rank=y)
-glimpse(rs_old)
-rs_all <- bind_rows(rs_old,rs_new)
 ### Question 3 ----------
 
 # The join in Q1 resulted in duplicates because of differences in how the songs and artists names were written
@@ -78,17 +61,14 @@ rs_all <- bind_rows(rs_old,rs_new)
 # Use both functions to make all artists/song lowercase and remove any extra spaces
 
 #ANSWER
-# piece wise first. 
-art <- rs_all$Artist  %>% str_remove_all('The') %>% str_replace_all("&","and") %>% 
-  str_remove_all("[:punct:]") %>% str_to_lower() %>% str_trim(side = "both")
-track <- rs_all$Song  %>% str_remove_all('The') %>% str_replace_all("&","and") %>% 
-  str_remove_all("[:punct:]") %>% str_to_lower() %>% str_trim(side = "both")
-rs_all$Artist <- art
-rs_all$Song <-  track
-
-# Must be a shorter way Come back to it when I finish!!
-#rs_all <-   rs_all %>% str_remove_all(c(Artist,Song),"The")  %>% 
-#  str_replace_all(c(Artist,Song),"&","and") %>% str_remove_all(c(Artist,Song),"[:punct:]")
+rs_all <- rs_all %>% mutate(Artist = str_remove_all(Artist, "The"),
+                            Artist = str_replace_all(Artist, "&", "and"),
+                            Artist = str_remove_all(Artist, "[:punct:]"),
+                            Artist = str_to_lower(str_trim(Artist)))
+rs_all <- rs_all %>% mutate(Song = str_remove_all(Song, "The"),
+                            Song = str_replace_all(Song, "&", "and"),
+                            Song = str_remove_all(Song, "[:punct:]"),
+                            Song = str_to_lower(str_trim(Song)))
 
 ### Question 4 ----------
 
@@ -101,9 +81,11 @@ rs_all$Song <-  track
 # in the new rs_joined compared to the original. Use nrow to check (there should be 799 rows)
 
 #ANSWER
-new <- filter(rs_all, Source=="New")
-old <- filter(rs_all, Source == "Old")
-rs_joined <- full_join(new,old, by = c("Artist","Song"),suffix= c("_Old","_New"))
+temp_new <- rs_all %>% filter(Source == "New")
+temp_old <- rs_all %>% filter(Source == "Old")
+rs_joined <- full_join(temp_old, temp_new, by = c("Artist", "Song"), suffix = c("_Old","_New"))
+nrow(rs_joined)
+
 ### Question 5 ----------
 
 # Let's clean up rs_joined with the following steps:
@@ -115,11 +97,11 @@ rs_joined <- full_join(new,old, by = c("Artist","Song"),suffix= c("_Old","_New")
 # You should now be able to see how each song moved up/down in rankings between the two lists
 
 #ANSWER
-no_source <- select(rs_joined,-c(Source_Old,Source_New))
-no_repeats <- na.omit(no_source,c(Rank_Old,Rank_New))
-rs_joined <- no_repeats %>%  mutate(Rank_Change = Rank_New - Rank_Old) %>% 
-     arrange(Rank_Change)
-
+rs_joined <- rs_joined %>% 
+  select(-starts_with("Source")) %>% 
+  filter(!is.na(Rank_New), !is.na(Rank_Old)) %>% 
+  mutate(Rank_Change = Rank_Old - Rank_New) %>% 
+  arrange(Rank_Change)
 
 ### Question 6 ----------
 
@@ -130,14 +112,12 @@ rs_joined <- no_repeats %>%  mutate(Rank_Change = Rank_New - Rank_Old) %>%
 # Which decade improved the most?
 
 #ANSWER
+rs_joined <- rs_joined %>% 
+  mutate(Decade = floor(Year_New/10)*10,
+         Decade = factor(paste0(Decade, "s")))
 
-rs_joined <- rs_joined %>% mutate(decade = floor(Year_New/10)*10)
-z <- rs_joined$decade
-rs_joined$decade <- factor(z, levels = c(1950,1960,1970,1980,1990,2000),
-         labels = c("1950s","1960s","1970s","1980s","1990s","2000s"))
-                                                            
-                                                                       
-max(decade)
+rs_joined %>% group_by(Decade) %>% 
+  summarize(M_Change = mean(Rank_Change))
 
 ### Question 7 ----------
 
@@ -147,9 +127,8 @@ max(decade)
 # proportion of songs in each of the top three decades (vs. all the rest)
 
 #ANSWER
-fct_count(rs_joined$decade,sort = TRUE) 
-pop <- fct_lump(rs_joined$decade,n=3)
-fct_count(pop, prop = .10)
+fct_count(rs_joined$Decade)
+fct_count(fct_lump(rs_joined$Decade, 3), prop = T)
 
 ### Question 8 ---------- 
 
@@ -158,9 +137,9 @@ fct_count(pop, prop = .10)
 # Use parse_date_time to fix it
 
 #ANSWER
-top20 <- read_csv( "top_20.csv")
-top20$Release <- parse_date_time(top20$Release,"d m y")
-glimpse(top20)
+top20 <- read_csv("top_20.csv")
+top20 <- top20 %>% mutate(Release_Date = parse_date_time(Release, "%d-%b-%Y"))
+
 ### Question 9 --------
 
 # top20's Style and Value are mixing two different variables into one column
@@ -168,8 +147,8 @@ glimpse(top20)
 # overwrite top20 with the pivoted data (there should now be 20 rows!)
 
 #ANSWER
-top20 <- pivot_wider(top20, names_from = Style ,values_from  = Value,names_sort = T)
 
+top20 <- top20 %>% pivot_wider(names_from = "Style", values_from = "Value")
 
 ### Question 10 ---------
 
@@ -183,11 +162,14 @@ top20 <- pivot_wider(top20, names_from = Style ,values_from  = Value,names_sort 
 
 #ANSWER
 
-test <- left_join(top20,rs_joined,by = c("Artist","Song")) %>%
-  mutate(Month = value <- month(Release,label = TRUE)) %>% 
-  mutate(Season = factor(format(Month,"%q"),levels= c(1,2,3,4),
-        labels = c("Winter","Spring","Summer","Fall")))
-fct_count(test$Season)
+top20 <- left_join(top20, rs_joined, by = c("Artist","Song"))
+top20 <- top20 %>% mutate(Release_Month = month(Release_Date, label = T),
+                          Season = fct_collapse(Release_Month,
+                                                Winter = c("Dec", "Jan","Feb"),
+                                                Spring = c("Mar","Apr","May"),
+                                                Summer = c("Jun", "Jul","Aug"),
+                                                Fall = c("Sep", "Oct", "Nov")))
+fct_count(top20$Season)
 
 ### Question 11 ---------
 
@@ -197,15 +179,6 @@ fct_count(test$Season)
 # Figure out which is the top-ranked song (from Rank_New) that used a minor key
 
 #ANSWER
-# top20 <- mutate(top20, Quality= ifelse(Key %in% "m", "Minor","Major"))
 
-#> The above did not work as expected, Maybe I need to use a function that 
-#> will search strings better then %in% does?
-
-test <- mutate(test, Quality= ifelse(str_detect(Key, "m"), "Minor","Major"))
-# the above code works much better.
-
-top_minor <- test 
-top_minor <-   filter(top_minor, str_detect(Quality, "Minor")) %>% arrange(Rank_New)
-view(top_minor)
-# Good Vibrations By the Beach Boys Rank is 6 
+top20 <- top20 %>% mutate(Quality = factor(ifelse(str_detect(Key, "m"), "Minor", "Major")))
+top20 %>% filter(Quality == "Minor") %>% slice_min(Rank_New)
